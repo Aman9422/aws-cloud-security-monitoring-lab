@@ -1,0 +1,20 @@
+# Credentials and local configuration
+.aws/
+.env
+.env.*
+*.pem
+*.key
+credentials
+config.local
+
+# Local CLI outputs and downloaded evidence
+test-download.txt
+*.log
+*.csv
+*.json
+!example-event.json
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
