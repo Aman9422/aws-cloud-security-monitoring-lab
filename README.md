@@ -56,6 +56,23 @@ The exact filter patterns, observed outcomes, and validation limitations are doc
 
 The `cloudsec-lab-reader` identity successfully listed objects in its permitted test bucket and downloaded `test.txt`. A request to list all buckets was denied because `s3:ListAllMyBuckets` was not granted. The denial was recorded and drove the verified unauthorized API alert workflow.
 
+## Evidence gallery
+
+The repository includes the following AWS console screenshots. Each image links to its full-resolution committed file.
+
+| Evidence | Screenshot |
+|---|---|
+| Multi-region CloudTrail configuration | [View screenshot](screenshots/cloudtrail-trail-config.png.png) |
+| CloudWatch log group | [View screenshot](screenshots/cloudwatch-log-group.png.png) |
+| Console login alarm configuration | [View screenshot](screenshots/console-login-alarm.png.png) |
+| Manual console-login alarm email test | [View screenshot](screenshots/console-login-manual-test-email.png.png) |
+| Least-privilege IAM reader identity | [View screenshot](screenshots/iam-reader-user.png.png) |
+| IAM least-privilege policy | [View screenshot](screenshots/least-privilege-policy.png.png) |
+| Unauthorized API alarm | [View screenshot](screenshots/unauthorized-api-alarm.png.png) |
+| Unauthorized API alert email | [View screenshot](screenshots/unauthorized-api-alert-email.png.png) |
+
+For the evidence interpretation and distinction between actual event-driven validation and a manual alarm-action test, see the [Evidence Catalogue](screenshots/README.md).
+
 ## Cost snapshot
 
 Billing was reviewed on **20 October 2026**. The account dashboard showed **$0.00 amount due**, **$99.99 in remaining credits**, **$0.01 month-to-date usage**, and a Free plan end date of **14 April 2027**. The cost-by-project dashboard reported usage covered by available Free Tier credits. The displayed service breakdown attributed the $0.01 to Amazon S3; the exact bucket and operation were not identified.
@@ -70,13 +87,13 @@ This is a point-in-time account observation, not a guarantee of future zero cost
 - The design is an educational lab, not a production-ready security monitoring baseline.
 - Public repository content excludes AWS access keys, secret keys, passwords, session tokens, and raw credentials. Account-specific bucket identifiers and notification addresses are omitted.
 
-## Repository contents
+## Technical documentation
 
 - [Architecture](architecture/architecture.md) — component relationships and telemetry flow.
 - [Implementation Details](docs/implementation-details.md) — deployed configuration and representative validation commands.
 - [Testing Results](docs/testing-results.md) — outcomes, evidence boundaries, and outstanding verification.
 - [Cost and Security Review](docs/cost-and-security-review.md) — billing snapshot, security observations, and resource-lifecycle considerations.
-- [Evidence Index](screenshots/README.md) — screenshot evidence catalogue.
+- [Evidence Catalogue](screenshots/README.md) — screenshot descriptions and interpretation.
 
 ## References
 
