@@ -1,36 +1,46 @@
-# Cost review and cleanup
+# Cost and Security Review
 
-## Cost review
+**Review date:** 20 October 2026
 
-The AWS bill was not verified as part of the recorded testing. Before leaving the lab running, open [AWS Billing and Cost Management](https://console.aws.amazon.com/costmanagement/home/) and review Bills, Cost Explorer (if available), and any Free Tier or usage dashboard available to your account.
+## Billing snapshot
 
-Potential charge areas include:
-- CloudTrail management-event copies or additional data-event configurations, depending on the trail design and usage.
-- S3 storage and requests for archived CloudTrail logs.
-- CloudWatch Logs ingestion and storage, metric filters, custom metrics, and alarms.
-- SNS notifications beyond any applicable free allowance.
+| Billing indicator | Observed value |
+|---|---:|
+| AWS plan | Free |
+| Amount due | $0.00 |
+| Remaining credits | $99.99 |
+| Month-to-date usage shown by the project dashboard | $0.01 |
+| Free plan end date shown in the account dashboard | 14 April 2027 |
+| Cost coverage message | Dashboard reported that usage was covered by available AWS Free Tier credits |
 
-Actual charges depend on account eligibility, configuration, Region, and usage. Do not assume the lab is free because it is small.
+The displayed service-level cost breakdown showed Amazon S3 at $0.01 and the other listed services at $0.00. The detailed view did not establish which individual bucket or operation accounted for the S3 amount.
 
-## Security review items
+These values are a point-in-time observation from the account dashboard, not a guarantee of future zero cost. Charges and credit eligibility can vary with configuration, usage, Region, and plan terms.
 
-- CloudWatch Logs retention is 7 days; this does not set S3 object retention.
-- Explicit SSE-KMS encryption for the CloudTrail S3 destination was not enabled at the time of the recorded review. Check the bucket's actual default encryption and consider a suitable encryption/key-management approach.
-- Confirm S3 Block Public Access is enabled and bucket policies limit access to required principals.
-- Keep credentials and unredacted CloudTrail logs out of GitHub.
-- Do not put AWS account identifiers, personal email addresses, or sensitive source details in public screenshots unless necessary and deliberately redacted.
+## Cost-bearing components
 
-## Cleanup options
+| Component | Potential cost driver in this design |
+|---|---|
+| Amazon S3 | CloudTrail archive storage and requests |
+| CloudWatch Logs | Log ingestion and stored events |
+| CloudWatch metrics and alarms | Custom metrics, metric filters, alarms, and evaluation |
+| AWS CloudTrail | Additional event types or data-event configurations beyond applicable included usage |
+| Amazon SNS | Notification delivery beyond any applicable allowance |
+| AWS KMS | Key usage if customer-managed KMS encryption is enabled |
 
-Only delete resources created specifically for this lab. Preserve logs and screenshots needed for project evidence before removing storage.
+Actual account billing remains authoritative for this project. The recorded dashboard showed a small usage amount covered by available credits and no amount due.
 
-1. Disable or delete the CloudWatch alarms `UnauthorizedApiCallsAlarm` and `ConsoleLoginFailuresAlarm` if monitoring is no longer needed.
-2. Delete the metric filters from `/aws/cloudtrail/security-lab` if no longer required.
-3. Unsubscribe the test email or delete the `cloudsec-lab-alerts` SNS topic when finished.
-4. If ending the lab, stop or delete `Cloudsec-lab-trail` after preserving required logs. Review all trails before changing shared logging resources.
-5. Delete `/aws/cloudtrail/security-lab` only after deciding that its events are no longer needed.
-6. Remove the lab IAM user's test permissions/user only after checking it is not used by another workflow.
-7. Delete the S3 log archive only if you intentionally no longer need the retained evidence. Emptying and deleting an S3 bucket is destructive; verify the bucket name and contents first.
-8. Recheck Billing and Cost Management after cleanup to confirm no unexpected resources remain.
+## Security observations
 
-Never delete or modify unrelated account resources during cleanup.
+- **Audit logging:** A multi-region CloudTrail trail delivers logs to S3 and the CloudWatch Logs group `/aws/cloudtrail/security-lab`.
+- **CloudWatch retention:** The log group is configured for 7 days. This does not set retention or deletion for objects in the S3 archive.
+- **Archive encryption:** Explicit SSE-KMS configuration for the CloudTrail S3 destination had not been enabled at the time of the recorded review. The bucket's default encryption configuration should be verified separately before any production use.
+- **Access control:** The S3 reader test demonstrated permitted object listing and retrieval within a designated bucket, and denial of account-wide bucket listing.
+- **Detection coverage:** Unauthorized API detection was end-to-end verified. The ConsoleLogin rule's email action was tested, but real failed-login event matching remains unverified.
+- **Public repository hygiene:** The public documentation omits account-specific bucket identifiers and alert email addresses. Credentials, access keys, secret keys, session tokens, and raw sensitive logs are not suitable for repository storage.
+
+## Resource lifecycle considerations
+
+The lab includes a CloudTrail trail, an S3 log archive, a CloudWatch log group, metric filters, alarms, an SNS topic, and a restricted IAM test identity. Their continued operation and retained data can have cost and security implications. Logs and screenshots may also be required as portfolio evidence, so deletion of evidence-bearing resources would change the documented state and may remove useful audit records.
+
+The project is an educational monitoring lab. Production adoption would require a defined retention policy, verified encryption settings, reviewed access policies, and ongoing cost monitoring.
