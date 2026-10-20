@@ -1,38 +1,43 @@
-# Testing results
+# Testing Results
 
-Test observations collected during the lab on 18–19 October 2026. These notes separate observed behavior from tests that remain outstanding.
+**Test window:** 18–20 October 2026  
+**Environment:** AWS account lab in `ap-southeast-2` (Sydney)
 
-## Summary
+## Executive summary
 
-| Test | Status | Evidence / notes |
-|---|---|---|
-| CloudTrail to CloudWatch Logs delivery | Pass | Four log streams were visible; newest listed event time was 2026-10-18 07:24:13 UTC. |
-| Restricted S3 list/read operations | Pass | `cloudsec-lab-reader` listed objects in its allowed bucket and downloaded `test.txt`. |
-| Least-privilege denial | Pass | `list-buckets` was denied because `s3:ListAllMyBuckets` was not granted. |
-| Unauthorized API-call filter/alarm | Pass | Denied request produced an alert; `UnauthorizedApiCallsAlarm` entered `ALARM`, an email arrived, and the alarm later returned to `OK`. |
-| SNS email subscription | Pass | An alert email was received; subscription was confirmed. |
-| Manual test of failed-login alarm action | Pass — notification path only | `aws cloudwatch set-alarm-state` set `ConsoleLoginFailuresAlarm` to `ALARM`; an email arrived. |
-| Real failed-console-login event matching | Pending | Event History in `ap-southeast-2` returned no `ConsoleLogin` results for the selected time range. |
-| Actual three-failure alarm threshold | Pending | A manual alarm-state change does not establish that three real sign-in failures generated the metric. |
-| AWS billing review | Pending | Review actual usage and charges in Billing and Cost Management. |
+The lab successfully demonstrated CloudTrail event collection, restricted S3 access, detection of an unauthorized API request, and email notification through CloudWatch alarms and SNS. The failed-console-login alarm is configured, but its real event-to-metric-to-alarm path remains unverified.
 
-## Unauthorized API test
+## Test matrix
 
-The following command was run using the restricted CLI profile:
+| ID | Test | Expected result | Observed result | Status |
+|---|---|---|---|---|
+| T-01 | CloudTrail to CloudWatch Logs delivery | Trail events appear in the configured log group | Four log streams were visible; the newest listed event time during the check was 18 Oct 2026 07:24:13 UTC | **Pass** |
+| T-02 | Restricted S3 object listing | The reader can list objects in its allowed bucket | Object listing succeeded | **Pass** |
+| T-03 | Restricted S3 object retrieval | The reader can download an object from its allowed bucket | `test.txt` was downloaded successfully | **Pass** |
+| T-04 | Account-wide bucket listing by restricted identity | Request is denied because `s3:ListAllMyBuckets` is not granted | `AccessDenied` observed and recorded in CloudTrail | **Pass** |
+| T-05 | Unauthorized API detection | Denied request increments the metric and triggers the alarm | `UnauthorizedApiCallsAlarm` entered `ALARM`, email was received, and the alarm later returned to `OK` | **Pass — end to end** |
+| T-06 | SNS email subscription | Alarm notification reaches the confirmed recipient | Notification email received | **Pass** |
+| T-07 | ConsoleLogin alarm notification action | An alarm in `ALARM` state invokes SNS and sends email | Manual `set-alarm-state` test generated an email | **Pass — action path only** |
+| T-08 | Real failed-console-login event matching | Real failed sign-in creates a matching CloudTrail record and metric | No `ConsoleLogin` events were returned in the investigated Sydney Event history query | **Not verified** |
+| T-09 | Three-failure alarm threshold | Three matching metric units within the evaluation period trigger the alarm | A manual state change does not test the threshold; real matching event sequence was not observed | **Not verified** |
+| T-10 | Billing and credit review | Current account billing state is documented | On 20 Oct 2026: $0.00 amount due, $99.99 remaining credits, $0.01 month-to-date usage; Free plan end date shown as 14 Apr 2027 | **Reviewed** |
 
-```bash
-aws s3api list-buckets --profile cloudsec-lab-reader
+## Unauthorized API detection
+
+The negative-permission test used the restricted CLI profile to request account-wide bucket listing. The request was denied because the identity did not have `s3:ListAllMyBuckets`. The corresponding event was visible in CloudTrail, and the unauthorized API alarm entered `ALARM`. An SNS email was received, and the alarm later returned to `OK` after the metric stopped breaching the threshold.
+
+This establishes the following tested path:
+
+```text
+Denied API request → CloudTrail → CloudWatch Logs
+→ Metric filter → CloudWatch alarm → SNS → Email
 ```
 
-Expected and observed behavior: access was denied because the user lacked `s3:ListAllMyBuckets`. This was a safe negative-permission test; do not add the missing permission.
+## Console login alarm: verification boundary
 
-The `UnauthorizedApiCallsAlarm` changed to `ALARM` around 18 October 2026 07:41 UTC, an alert email was received, and the alarm later returned to `OK` after the metric stopped breaching its threshold.
+The configured filter matches records where the event source is `signin.amazonaws.com`, the event name is `ConsoleLogin`, and `responseElements.ConsoleLogin` is `Failure`. Event History in the Sydney Region returned no `ConsoleLogin` records for the investigated time range.
 
-## Failed console sign-in alarm
-
-The filter is configured to match CloudTrail records with event source `signin.amazonaws.com`, event name `ConsoleLogin`, and `responseElements.ConsoleLogin = Failure`. The alarm threshold is at least three metric units in a five-minute evaluation period.
-
-CloudTrail Event history was searched in the Sydney Region with event name `ConsoleLogin` for the selected period and returned no matches. The alarm action was then tested manually:
+The following manual state change was performed:
 
 ```bash
 aws cloudwatch set-alarm-state \
@@ -42,12 +47,11 @@ aws cloudwatch set-alarm-state \
   --region ap-southeast-2
 ```
 
-An email was received. This verifies alarm action → SNS → email delivery. It **does not** verify that the metric filter matches real failed sign-in records or that three actual failures trigger the alarm.
+An email was received. This confirms the alarm action-to-SNS-to-email path. It does **not** demonstrate that a real failed sign-in matched the metric filter, nor that three genuine failures crossed the configured threshold.
 
-### Recommended follow-up
+Consequently, this detector is reported as **configured, with notification action tested, but not end-to-end verified**. The absence of events in the investigated view is not proof that all Google- or federated sign-in failures are invisible to CloudTrail; the recorded authentication path and relevant event location would need to be established before making that conclusion.
 
-1. Search appropriate CloudTrail Regions and the CloudWatch Logs group for `eventSource = signin.amazonaws.com` and `eventName = ConsoleLogin`.
-2. If records are found, inspect `responseElements.ConsoleLogin` and validate the pattern against the actual event.
-3. Only mark the real failed-login detector as end-to-end verified after real matching events produce the metric, the threshold is crossed, and the notification is received.
+## Overall assessment
 
-Do not deliberately enter incorrect credentials several times on a production/root account. Use an approved test identity only if a real sign-in test is needed and account lockout/identity-provider risks have been assessed.
+The primary unauthorized API alert workflow is end-to-end verified. Least-privilege access behavior and SNS delivery are demonstrated. The console-login detector is present as a configured secondary rule, with its real event-matching behavior remaining an explicit validation limitation.
+
