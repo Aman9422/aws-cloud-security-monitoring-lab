@@ -18,3 +18,13 @@ test-download.txt
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Terraform local files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
